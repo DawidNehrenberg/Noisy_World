@@ -141,6 +141,28 @@ def smooth_2d(array, window_width):
     
     return smoothed_array
 
+def lake_filter(array) :
+    output = np.copy(array)
+    array = np.pad(array, 1, mode = "wrap")
+    for x in range(180):
+        for y in range(360):
+            if (array[x,y] <= 1 and array[x + 1, y] == 1):
+                output[x, y] = 2
+            if (array[x,y] <= 1 and array[x- 1, y] == 1):
+                output[x - 1, y] = 2
+            if (array[x,y] <= 1 and array[x, y + 1] == 1):
+                output[x, y] = 2
+            if (array[x,y] <= 1 and array[x, y - 1] == 1):
+                output[x, y - 1] = 2
+    for x in range(180):
+        for y in range(360):
+            if output[x,y] == 1:
+                output[x,y] = -1
+    output = np.where(output >= 0, 1, -1)
+    #Covers most edge cases, with the exception of a few which are weird...
+    return output
+
+
 #
 def world_gen(octaves, seed):
     np.random.seed(seed)
@@ -175,10 +197,18 @@ def world_gen(octaves, seed):
         bar()
     
     print("Eroding your world!")
+    with alive_bar(1) as bar:
     #will need their own splines due to different ranges
-    final_world_map = final_world_map + ((Continentalness.to_numpy() ** 2))
-    final_world_map = final_world_map - ((erosion_factor.to_numpy() ** 2))
-    #final_world_map = final_world_map + 35
+        final_world_map = final_world_map + ((Continentalness.to_numpy() ** 2))
+        final_world_map = final_world_map - ((erosion_factor.to_numpy() ** 2))
+        #final_world_map = final_world_map + 35
+        bar()
+    print("Removing small lakes!")
+    with alive_bar(1) as bar:
+        binary_world = np.where(final_world_map > 0, 0, 1)
+        b_world = lake_filter(binary_world)
+        final_world_map = final_world_map * b_world
+        bar()
     return final_world_map
 
 #layers = int(input("How many Octaves? "))
@@ -212,50 +242,19 @@ x_grid = x_coords.reshape(180, 360)
 y_grid = y_coords.reshape(180, 360)
 z_grid = z_values.reshape(180, 360)
 
-#plt.figure(figsize=(8, 8))
-#scatter = plt.scatter(df_xyz["X"], df_xyz["Y"], c = df_xyz["Z"], cmap= ocn_land_pal, s = 10, marker = "s", norm = norm)
-#plt.colorbar(scatter, label = "Height")
-#plt.xlabel("Longitude (°E)")
-#plt.ylabel("Latitude (°N)")
-#plt.show()
+plt.figure(figsize=(8, 8))
+scatter = plt.scatter(df_xyz["X"], df_xyz["Y"], c = df_xyz["Z"], cmap= ocn_land_pal, s = 10, marker = "s", norm = norm)
+plt.colorbar(scatter, label = "Height")
+plt.xlabel("Longitude (°E)")
+plt.ylabel("Latitude (°N)")
+plt.show()
 
 #feature filtering
-binary_world = np.where(world > 0, 0, 1)
-b_world = binary_world
-def lake_filter(array) :
-    output = np.copy(array)
-    array = np.pad(array, 1, mode = "wrap")
-    kernel = np.array([
-        [1, 1, 1],
-        [1, 0, 1],
-        [1, 1, 1]])
-    counter = 0
-    for x in range(180):
-        for y in range(360):
-            if (array[x,y] <= 1 and array[x + 1, y] == 1):
-                output[x, y] = 2
-            if (array[x,y] <= 1 and array[x- 1, y] == 1):
-                output[x - 1, y] = 2
-            if (array[x,y] <= 1 and array[x, y + 1] == 1):
-                output[x, y] = 2
-            if (array[x,y] <= 1 and array[x, y - 1] == 1):
-                output[x, y - 1] = 2
-    for x in range(180):
-        for y in range(360):
-            if output[x,y] == 1:
-                output[x,y] = 0
-    output = np.where(output > 1, 1, 0)
-    #Covers most edge cases, with the exception of a few which are weird...
-    for x in range(180):
-        for y in range(360):
-            if (output[x, y] == 1):
-                counter = counter + 1
-            else:
-                output[x, y - counter:y] = counter
-                counter = 0
-                
-    return output
-b_world = lake_filter(b_world)
-plt.imshow(b_world)
-plt.colorbar()
-plt.show()
+#counter = 0
+    #for x in range(180):
+        #for y in range(360):
+            #if (output[x, y] == 1):
+                #counter = counter + 1
+            #else:
+                #output[x, y - counter:y] = counter
+                #counter = 0
