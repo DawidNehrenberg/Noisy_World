@@ -1,6 +1,6 @@
 # Dev log for Noisy World
 
-##### v0.0.1
+#### v0.0.1
 ###### 20/11/2024
 
 <p> Adding spline functions to alter the height of the base map to enable a larger range of heights.</p> 
